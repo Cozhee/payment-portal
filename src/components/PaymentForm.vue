@@ -46,7 +46,7 @@
         </div>
         <div class="card-footer">
           <button
-            @click="createOrFindCustomer"
+            @click="createOrFindCustomer()"
             type="submit"
             class="btn btn-primary w-100"
           >
@@ -72,13 +72,6 @@ const creditCardChild = ref(null);
 const bankAccountChild = ref(null);
 const userDetailsChild = ref(null);
 
-const settings = {
-  port: 8080,
-  apiv4url: "https://sandbox-api.paysimple.com/v4",
-  username: import.meta.env.VITE_APP_USERNAME,
-  apikey: import.meta.env.VITE_APP_TOKEN,
-};
-
 function setPaymentMethod(type) {
   paymentCreditCard.value = false;
   paymentBankAccount.value = false;
@@ -92,46 +85,35 @@ function setPaymentMethod(type) {
   return;
 }
 
-function getAuthHeader() {
-  let time = new Date().toISOString();
-  const utf8Time = CryptoJS.enc.Utf8.stringify(time);
-  const utf8ApiKey = CryptoJS.enc.Utf8.stringify(settings.apikey);
-
-  const hash = CryptoJS.HmacSHA256(utf8Time, utf8ApiKey);
-  const base64Hash = CryptoJS.enc.Base64.stringify(hash);
-  return (
-    "PSSERVER " +
-    "Accessid=" +
-    settings.username +
-    "; timestamp=" +
-    time +
-    "; signature=" +
-    base64Hash
-  );
-}
-
 async function createOrFindCustomer() {
-  const options = {
-    Accept: "*/*",
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: getAuthHeader(),
-    },
-  };
-  const customers = await fetch(settings.apiv4url + "/customer", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: getAuthHeader(),
-    },
+  const email = userDetailsChild.value.email;
+  const results = await fetch("http://localhost:8080/customer", {
+    method: "GET",
   });
-  console.log(customers);
-}
-
-function test() {
-  const item = getAuthHeader();
-  console.log(item);
+  const customers = await results.json();
+  const customer = customers.filter((customer) => customer.Email === email);
+  if (customer) {
+    const customerId = customer[0].Id;
+    const paymentResults = await fetch(
+      `http://localhost:8080/default-payment/${customerId}`,
+      {
+        method: "GET",
+      }
+    );
+    const defaultPayment = await paymentResults.json();
+    const paymentAccountId = defaultPayment.Id;
+    const payment = {
+      Amount: Number(userDetailsChild.value.amount),
+      AccountId: paymentAccountId,
+    };
+    const makePayment = await fetch(`http://localhost:8080/collect-payment`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payment),
+    });
+  }
 }
 </script>
 

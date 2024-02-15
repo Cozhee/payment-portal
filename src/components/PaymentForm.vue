@@ -63,6 +63,7 @@ import { ref } from "vue";
 
 const paymentCreditCard = ref(true);
 const paymentBankAccount = ref(false);
+const formErrors = ref([]);
 
 // child refs
 const creditCardChild = ref(null);
@@ -83,11 +84,36 @@ function setPaymentMethod(type) {
 }
 
 function cardNumberValidation() {
-  var visaRegEx = /^(?:4[0-9]{12}(?:[0-9]{3})?)$/;
-  console.log(visaRegEx.test(creditCardChild.value.cardNumber));
+  var RegEx =
+    /^(?:4[0-9]{12}(?:[0-9]{3})?|[25][1-7][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/;
+  return RegEx.test(creditCardChild.value.cardNumber);
+}
+
+function userAndCardDetailValidation() {
+  formErrors.value = [];
+  if (!creditCardChild.value.cardNumber)
+    formErrors.value.push("Please enter a valid card number");
+  if (!creditCardChild.value.expirationDate)
+    formErrors.value.push("Please enter en expiration date");
+  if (!creditCardChild.value.zipcode)
+    formErrors.value.push("Please enter a zip code");
+  if (!creditCardChild.value.issuer)
+    formErrors.value.push("Please enter a card issuer");
+  if (!userDetailsChild.value.firstName)
+    formErrors.value.push("Please enter a first name");
+  if (!userDetailsChild.value.lastName)
+    formErrors.value.push("Please enter a last name");
+  if (!userDetailsChild.value.email)
+    formErrors.value.push("Please enter an email");
+  if (!userDetailsChild.value.amount)
+    formErrors.value.push("Please enter a payment amount");
 }
 
 async function createOrFindCustomer() {
+  userAndCardDetailValidation();
+  if (!cardNumberValidation() || formErrors.value.length) {
+    return false;
+  }
   const email = userDetailsChild.value.email;
   const results = await fetch(import.meta.env.VITE_APP_HOST + "/customer", {
     method: "GET",

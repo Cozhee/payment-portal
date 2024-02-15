@@ -11,7 +11,6 @@
         id="first-name"
         placeholder="Enter first name"
         v-model="firstName"
-        required
       />
     </div>
     <div class="mb-3">
@@ -24,7 +23,6 @@
         id="last-name"
         placeholder="Enter last name"
         v-model="lastName"
-        required
       />
     </div>
     <div class="mb-3">
@@ -37,7 +35,6 @@
         id="email"
         placeholder="example@gmail.com"
         v-model="email"
-        required
       />
     </div>
     <div class="mb-3">
@@ -50,7 +47,6 @@
         id="amount"
         placeholder="$"
         v-model="amount"
-        required
       />
     </div>
   </div>

@@ -21,16 +21,6 @@
       >
       <input type="account-number" class="form-control" id="account-number" />
     </div>
-    <div class="mb-3">
-      <label for="payment-amount" class="form-label fw-bold"
-        >Payment Amount</label
-      >
-      <input
-        type="payment-amount"
-        class="form-control w-50"
-        id="payment-amount"
-      />
-    </div>
   </form>
 </template>
 <script setup></script>

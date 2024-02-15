@@ -1,5 +1,8 @@
 <template>
-  <div class="mt-5 payment-form d-flex justify-content-center">
+  <form
+    @submit.prevent="createOrFindCustomer()"
+    class="mt-5 payment-form d-flex justify-content-center"
+  >
     <div class="user-details me-5">
       <PaymentUserDetails ref="userDetailsChild" />
     </div>
@@ -45,17 +48,11 @@
           </div>
         </div>
         <div class="card-footer">
-          <button
-            @click="createOrFindCustomer()"
-            type="submit"
-            class="btn btn-primary w-100"
-          >
-            Submit
-          </button>
+          <button type="submit" class="btn btn-primary w-100">Submit</button>
         </div>
       </div>
     </div>
-  </div>
+  </form>
 </template>
 
 <script setup>
@@ -85,17 +82,24 @@ function setPaymentMethod(type) {
   return;
 }
 
+function cardNumberValidation() {
+  var visaRegEx = /^(?:4[0-9]{12}(?:[0-9]{3})?)$/;
+  console.log(visaRegEx.test(creditCardChild.value.cardNumber));
+}
+
 async function createOrFindCustomer() {
   const email = userDetailsChild.value.email;
-  const results = await fetch("http://localhost:8080/customer", {
+  const results = await fetch(import.meta.env.VITE_APP_HOST + "/customer", {
     method: "GET",
   });
   const customers = await results.json();
   const customer = customers.filter((customer) => customer.Email === email);
-  if (customer) {
+
+  // find existing user by email and pay with default cc
+  if (customer.length) {
     const customerId = customer[0].Id;
     const paymentResults = await fetch(
-      `http://localhost:8080/default-payment/${customerId}`,
+      import.meta.env.VITE_APP_HOST + `/default-payment/${customerId}`,
       {
         method: "GET",
       }
@@ -106,27 +110,86 @@ async function createOrFindCustomer() {
       Amount: Number(userDetailsChild.value.amount),
       AccountId: paymentAccountId,
     };
-    const makePayment = await fetch(`http://localhost:8080/collect-payment`, {
+    const makePayment = await fetch(
+      import.meta.env.VITE_APP_HOST + "/collect-payment",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payment),
+      }
+    );
+    return;
+  }
+
+  // create a new user and add card details to account
+  const customerDetails = {
+    FirstName: userDetailsChild.value.firstName,
+    LastName: userDetailsChild.value.lastName,
+    Email: userDetailsChild.value.email,
+  };
+
+  const createCustomer = await fetch(
+    import.meta.env.VITE_APP_HOST + "/customer",
+    {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payment),
-    });
-  }
+      body: JSON.stringify(customerDetails),
+    }
+  );
+
+  const createdCustomer = await createCustomer.json();
+  const { Id } = createdCustomer;
+
+  const cardDetails = {
+    CreditCardNumber: creditCardChild.value.cardNumber,
+    ExpirationDate: creditCardChild.value.expirationDate,
+    Issuer: creditCardChild.value.issuer,
+    BillingZipCode: creditCardChild.value.zipcode,
+    CustomerId: Id,
+  };
+
+  const createCardAccount = await fetch(
+    import.meta.env.VITE_APP_HOST + "/add-card",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(cardDetails),
+    }
+  );
+
+  const createdAccount = await createCardAccount.json();
+  const { Id: accountId } = createdAccount;
+
+  const paymentDetails = {
+    Amount: Number(userDetailsChild.value.amount),
+    AccountId: accountId,
+  };
+
+  const makePayment = await fetch(
+    import.meta.env.VITE_APP_HOST + "/collect-payment",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(paymentDetails),
+    }
+  );
 }
 </script>
 
 <style scoped>
 .payment-details {
-  min-width: 600px;
+  width: 600px;
 }
 
 .user-details {
   width: 400px;
-}
-
-.card {
-  background-color: #efefef;
 }
 </style>

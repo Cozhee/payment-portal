@@ -53,17 +53,26 @@
       </div>
     </div>
   </form>
+  <div
+    v-if="paymentAccepted"
+    class="alert alert-success mt-5 w-50 mx-auto"
+    role="alert"
+  >
+    Success! Your payment has been accepted.
+  </div>
 </template>
 
 <script setup>
 import PaymentCreditCard from "./PaymentCreditCard.vue";
 import PaymentBankAccount from "./PaymentBankAccount.vue";
 import PaymentUserDetails from "./PaymentUserDetails.vue";
+import { fetchApi } from "../api/utils/fetchApi.js";
 import { ref } from "vue";
 
 const paymentCreditCard = ref(true);
 const paymentBankAccount = ref(false);
 const formErrors = ref([]);
+const paymentAccepted = ref(false);
 
 // child refs
 const creditCardChild = ref(null);
@@ -84,9 +93,34 @@ function setPaymentMethod(type) {
 }
 
 function cardNumberValidation() {
+  // regex for Visa, Mastercard, Discover, and Amex
   var RegEx =
     /^(?:4[0-9]{12}(?:[0-9]{3})?|[25][1-7][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/;
   return RegEx.test(creditCardChild.value.cardNumber);
+}
+
+async function checkForExistingCardAccount(customerId) {
+  const accounts = await fetchApi(
+    `/customer/${customerId}/creditcardaccounts`,
+    "GET"
+  );
+  const lastFourDigits = creditCardChild.value.cardNumber.slice(-4);
+  const account = accounts.filter(
+    (account) => account.CreditCardNumber.slice(-4) === lastFourDigits
+  );
+  if (account.length) {
+    makePayment(account[0].Id);
+    return true;
+  }
+  return false;
+}
+
+async function makePayment(accountId) {
+  const payment = {
+    Amount: userDetailsChild.value.amount,
+    AccountId: accountId,
+  };
+  await fetchApi("/collect-payment", "POST", payment);
 }
 
 function userAndCardDetailValidation() {
@@ -109,65 +143,75 @@ function userAndCardDetailValidation() {
     formErrors.value.push("Please enter a payment amount");
 }
 
+function paymentAlert() {
+  paymentAccepted.value = true;
+  setTimeout(() => {
+    paymentAccepted.value = false;
+  }, "6000");
+}
+
+function clearForms() {
+  userDetailsChild.value.firstName = "";
+  userDetailsChild.value.lastName = "";
+  userDetailsChild.value.email = "";
+  userDetailsChild.value.amount = "";
+  creditCardChild.value.cardNumber = "";
+  creditCardChild.value.month = "";
+  creditCardChild.value.year = "";
+  creditCardChild.value.zipcode = "";
+  creditCardChild.value.issuer = "";
+}
+
 async function createOrFindCustomer() {
+  // creates formErrors if any
   userAndCardDetailValidation();
   if (!cardNumberValidation() || formErrors.value.length) {
     return false;
   }
   const email = userDetailsChild.value.email;
-  const results = await fetch(import.meta.env.VITE_APP_HOST + "/customer", {
-    method: "GET",
-  });
-  const customers = await results.json();
+
+  const customers = await fetchApi("/customer", "GET");
   const customer = customers.filter((customer) => customer.Email === email);
 
   // find existing user by email and pay with default cc
   if (customer.length) {
     const customerId = customer[0].Id;
-    const paymentResults = await fetch(
-      import.meta.env.VITE_APP_HOST + `/default-payment/${customerId}`,
-      {
-        method: "GET",
-      }
-    );
-    const defaultPayment = await paymentResults.json();
-    const paymentAccountId = defaultPayment.Id;
-    const payment = {
-      Amount: Number(userDetailsChild.value.amount),
-      AccountId: paymentAccountId,
+
+    const cardCheck = await checkForExistingCardAccount(customerId);
+    // if customer has card saved in account return
+    if (cardCheck) {
+      paymentAlert();
+      clearForms();
+      return;
+    }
+
+    // add new card to customer
+    const cardDetails = {
+      CreditCardNumber: creditCardChild.value.cardNumber,
+      ExpirationDate: creditCardChild.value.expirationDate,
+      Issuer: creditCardChild.value.issuer,
+      BillingZipCode: creditCardChild.value.zipcode,
+      CustomerId: customerId,
     };
-    const makePayment = await fetch(
-      import.meta.env.VITE_APP_HOST + "/collect-payment",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payment),
-      }
-    );
+
+    const newCardAccount = await fetchApi("/add-card", "POST", cardDetails);
+    const { Id: accountId } = newCardAccount;
+
+    await makePayment(accountId);
+    paymentAlert();
+    clearForms();
     return;
   }
 
-  // create a new user and add card details to account
+  // create a new user with an inital card
   const customerDetails = {
     FirstName: userDetailsChild.value.firstName,
     LastName: userDetailsChild.value.lastName,
     Email: userDetailsChild.value.email,
   };
 
-  const createCustomer = await fetch(
-    import.meta.env.VITE_APP_HOST + "/customer",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(customerDetails),
-    }
-  );
+  const createdCustomer = await fetchApi("/customer", "POST", customerDetails);
 
-  const createdCustomer = await createCustomer.json();
   const { Id } = createdCustomer;
 
   const cardDetails = {
@@ -178,35 +222,13 @@ async function createOrFindCustomer() {
     CustomerId: Id,
   };
 
-  const createCardAccount = await fetch(
-    import.meta.env.VITE_APP_HOST + "/add-card",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(cardDetails),
-    }
-  );
+  const createdAccount = await fetchApi("/add-card", "POST", cardDetails);
 
-  const createdAccount = await createCardAccount.json();
   const { Id: accountId } = createdAccount;
 
-  const paymentDetails = {
-    Amount: Number(userDetailsChild.value.amount),
-    AccountId: accountId,
-  };
-
-  const makePayment = await fetch(
-    import.meta.env.VITE_APP_HOST + "/collect-payment",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(paymentDetails),
-    }
-  );
+  await makePayment(accountId);
+  paymentAlert();
+  clearForms();
 }
 </script>
 

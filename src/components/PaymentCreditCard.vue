@@ -17,14 +17,27 @@
         <label for="expiration-date" class="form-label fw-bold"
           >Expiration Date <span class="asterik">*</span></label
         >
-        <input
-          type="expiration-date"
-          class="form-control"
-          id="expiration-date"
-          placeholder="MM/YYYY"
-          v-model="expirationDate"
-          required
-        />
+        <div class="exp-date d-flex align-items-center">
+          <input
+            type="expiration-date"
+            class="form-control text-center"
+            id="expiration-date"
+            placeholder="MM"
+            v-model="month"
+            maxlength="2"
+            required
+          />
+          <span class="exp-separator">/</span>
+          <input
+            type="expiration-date"
+            class="form-control text-center"
+            id="expiration-date"
+            placeholder="YYYY"
+            v-model="year"
+            maxlength="4"
+            required
+          />
+        </div>
       </div>
       <div class="zipcode">
         <label for="zipcode" class="form-label fw-bold"
@@ -61,10 +74,11 @@
   </form>
 </template>
 <script setup>
-import { defineExpose, ref } from "vue";
+import { defineExpose, ref, computed } from "vue";
 
 const cardNumber = ref("");
-const expirationDate = ref("");
+const month = ref("");
+const year = ref("");
 const zipcode = ref("");
 const issuer = ref("");
 const cardIssuers = [
@@ -73,6 +87,10 @@ const cardIssuers = [
   { type: "Master", img: "mastercard.svg" },
   { type: "Visa", img: "visa.svg" },
 ];
+
+const expirationDate = computed(() => {
+  return month.value + "/" + year.value;
+});
 
 defineExpose({
   cardNumber,
@@ -98,5 +116,18 @@ function setCardIssuer(type) {
 .credit-card-issuer:hover {
   scale: 1.1;
   cursor: pointer;
+}
+
+.exp-date {
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  width: 150px;
+}
+.exp-date input {
+  border: 0;
+}
+
+.exp-separator {
+  font-size: 20px;
 }
 </style>

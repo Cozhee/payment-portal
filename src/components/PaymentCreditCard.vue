@@ -10,6 +10,7 @@
         id="card-details"
         v-model="cardNumber"
         required
+        @input="setCardIssuer"
       />
     </div>
     <div class="mb-3 d-flex">
@@ -53,14 +54,11 @@
       </div>
     </div>
     <div class="mb-3">
-      <label for="zipcode" class="form-label fw-bold"
-        >Select Card Type <span class="asterik">*</span></label
-      >
+      <label for="zipcode" class="form-label fw-bold">Valid Card Types</label>
       <div class="card-types d-flex align-items-center">
         <div class="card-icons me-5">
           <img
             v-for="card in cardIssuers"
-            @click="setCardIssuer(card.type)"
             class="credit-card-issuer me-2"
             :src="getImageUrl(card.img)"
             alt="credit-card"
@@ -97,14 +95,17 @@ defineExpose({
   expirationDate,
   zipcode,
   issuer,
+  month,
+  year,
 });
 
 function getImageUrl(name) {
   return new URL(`../../public/icons/${name}`, import.meta.url).href;
 }
 
-function setCardIssuer(type) {
-  issuer.value = type;
+function setCardIssuer() {
+  const cardMapper = { 3: "Amex", 4: "Visa", 5: "Master", 6: "Discover" };
+  issuer.value = cardMapper[cardNumber.value[0]] || "";
 }
 </script>
 <style scoped>

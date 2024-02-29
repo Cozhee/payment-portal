@@ -9,7 +9,7 @@
     <div class="payment-details">
       <h3 class="text-center mb-3">Payment Details</h3>
       <div class="card">
-        <div
+        <!-- <div
           class="card-header d-flex align-items-center justify-content-center"
         >
           <div class="btn-group">
@@ -38,7 +38,7 @@
               >ACH / Bank Payment</label
             >
           </div>
-        </div>
+        </div> -->
         <div class="card-body">
           <div v-if="paymentCreditCard">
             <PaymentCreditCard ref="creditCardChild" />
@@ -53,6 +53,15 @@
       </div>
     </div>
   </form>
+  <div
+    class="alert alert-danger w-25 mx-auto mt-5"
+    role="alert"
+    v-if="formErrors.length"
+  >
+    <h6 v-for="error in formErrors">
+      {{ error }}
+    </h6>
+  </div>
   <div
     v-if="paymentAccepted"
     class="alert alert-success mt-5 w-50 mx-auto"
@@ -125,22 +134,25 @@ async function makePayment(accountId) {
 
 function userAndCardDetailValidation() {
   formErrors.value = [];
-  if (!creditCardChild.value.cardNumber)
-    formErrors.value.push("Please enter a valid card number");
-  if (!creditCardChild.value.expirationDate)
-    formErrors.value.push("Please enter en expiration date");
-  if (!creditCardChild.value.zipcode)
-    formErrors.value.push("Please enter a zip code");
-  if (!creditCardChild.value.issuer)
-    formErrors.value.push("Please enter a card issuer");
-  if (!userDetailsChild.value.firstName)
-    formErrors.value.push("Please enter a first name");
-  if (!userDetailsChild.value.lastName)
-    formErrors.value.push("Please enter a last name");
-  if (!userDetailsChild.value.email)
-    formErrors.value.push("Please enter an email");
-  if (!userDetailsChild.value.amount)
-    formErrors.value.push("Please enter a payment amount");
+  const { cardNumber, expirationDate, zipcode, issuer } = creditCardChild.value;
+  const { firstName, lastName, email, amount } = userDetailsChild.value;
+
+  const inputValidationArr = [
+    { value: cardNumber, errorText: "card number" },
+    { value: expirationDate, errorText: "expiration date" },
+    { value: zipcode, errorText: "zipcode" },
+    { value: issuer, errorText: "card type" },
+    { value: firstName, errorText: "first name" },
+    { value: lastName, errorText: "last name" },
+    { value: email, errorText: "email" },
+    { value: amount, errorText: "amount" },
+  ];
+
+  inputValidationArr.forEach((input) => {
+    if (!input.value) {
+      formErrors.value.push("Please enter your " + input.errorText);
+    }
+  });
 }
 
 function paymentAlert() {

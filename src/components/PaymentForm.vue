@@ -58,9 +58,7 @@
     role="alert"
     v-if="formErrors.length"
   >
-    <h6 v-for="error in formErrors">
-      {{ error }}
-    </h6>
+    <h6 class="mb-0">Please correct the errors</h6>
   </div>
   <div
     v-if="paymentAccepted"
@@ -133,24 +131,47 @@ async function makePayment(accountId) {
 }
 
 function userAndCardDetailValidation() {
+  // reset user details form class errors
+  userDetailsChild.value.firstNameError = false;
+  userDetailsChild.value.lastNameError = false;
+  userDetailsChild.value.emailError = false;
+  userDetailsChild.value.amountError = false;
+
+  // reset credit card form class errors
+  creditCardChild.value.cardNumberError = false;
+  creditCardChild.value.zipCodeError = false;
+  creditCardChild.value.expirationDateError = false;
+
   formErrors.value = [];
-  const { cardNumber, expirationDate, zipcode, issuer } = creditCardChild.value;
+  const { cardNumber, month, year, zipcode, issuer } = creditCardChild.value;
   const { firstName, lastName, email, amount } = userDetailsChild.value;
 
   const inputValidationArr = [
-    { value: cardNumber, errorText: "card number" },
-    { value: expirationDate, errorText: "expiration date" },
-    { value: zipcode, errorText: "zipcode" },
-    { value: issuer, errorText: "card type" },
-    { value: firstName, errorText: "first name" },
-    { value: lastName, errorText: "last name" },
-    { value: email, errorText: "email" },
-    { value: amount, errorText: "amount" },
+    { value: cardNumber, text: "cardNumber", component: creditCardChild },
+    {
+      value: month,
+      text: "expirationDate",
+      component: creditCardChild,
+    },
+    {
+      value: year,
+      text: "expirationDate",
+      component: creditCardChild,
+    },
+    { value: zipcode, text: "zipCode", component: creditCardChild },
+    { value: issuer, text: "issuer", component: creditCardChild },
+    { value: firstName, text: "firstName", component: userDetailsChild },
+    { value: lastName, text: "lastName", component: userDetailsChild },
+    { value: email, text: "email", component: userDetailsChild },
+    { value: amount, text: "amount", component: userDetailsChild },
   ];
 
   inputValidationArr.forEach((input) => {
     if (!input.value) {
+      const child = input.component;
+      const field = input.text;
       formErrors.value.push("Please enter your " + input.errorText);
+      child.value[field + "Error"] = true;
     }
   });
 }

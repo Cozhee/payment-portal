@@ -7,6 +7,7 @@
       <input
         type="card-details"
         class="form-control"
+        :class="{ cardNumberError: cardNumberError }"
         id="card-details"
         v-model="cardNumber"
         required
@@ -18,10 +19,14 @@
         <label for="expiration-date" class="form-label fw-bold"
           >Expiration Date <span class="asterik">*</span></label
         >
-        <div class="exp-date d-flex align-items-center">
+        <div
+          class="exp-date d-flex align-items-center"
+          :class="{ expirationDateError: expirationDateError }"
+        >
           <input
             type="expiration-date"
             class="form-control text-center"
+            :class="{ monthError: monthError }"
             id="expiration-date"
             placeholder="MM"
             v-model="month"
@@ -47,6 +52,7 @@
         <input
           type="text"
           class="form-control"
+          :class="{ zipCodeError: zipCodeError }"
           id="zipcode"
           v-model="zipcode"
           required
@@ -90,6 +96,12 @@ const expirationDate = computed(() => {
   return month.value + "/" + year.value;
 });
 
+const cardNumberError = ref(false);
+const monthError = ref(false);
+const yearError = ref(false);
+const zipCodeError = ref(false);
+const expirationDateError = ref(false);
+
 defineExpose({
   cardNumber,
   expirationDate,
@@ -97,6 +109,11 @@ defineExpose({
   issuer,
   month,
   year,
+  cardNumberError,
+  monthError,
+  yearError,
+  zipCodeError,
+  expirationDateError,
 });
 
 function getImageUrl(name) {
@@ -130,5 +147,12 @@ function setCardIssuer() {
 
 .exp-separator {
   font-size: 20px;
+}
+
+.cardNumberError,
+.monthError,
+.zipCodeError,
+.expirationDateError {
+  border: 1px solid red;
 }
 </style>
